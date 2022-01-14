@@ -84,8 +84,9 @@ global previousMouseX := 0
 global b := "" ;
 global joyStickX := 16384 ; initiate from center
 global lastMouseReset := 0
-global mouseHideEnabled := false
-global markerEnabled := false
+global mouseHideEnabled := False
+mouseHiding()
+global markerEnabled := True
 global markerColorIndex := 1
 
 ;-Setup
@@ -474,6 +475,10 @@ cursor(bshow := True) { ; show the mouse cursor
 return
 
 ^F8::
+	mouseHiding()
+return
+
+mouseHiding() {
 	mouseHideEnabled := !mouseHideEnabled
 	if (mouseHideEnabled) {
 		cursor(0)
@@ -482,8 +487,9 @@ return
 	else {	
 		cursor(1)
 		BlockInput, MouseMoveOff
-	}	
-return
+		return
+	}
+}
 
 ^F9::ToggleFakeFullscreen()
 ^F10::joyStickX := 16384
@@ -500,3 +506,13 @@ return
 	cursor(1)
 	ExitApp
 return
+
+#if mouseHideEnabled = 1
+
+LButton::
+RButton::
+MButton::
+WheelDown::
+WheelUp::
+
+#if
