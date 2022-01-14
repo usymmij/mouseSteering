@@ -2,6 +2,8 @@
 
 Made for Forza 5, but works on probably any other game
 
+## PREREQUISITES
+
 You need a recent release of VJoy to use this
 https://sourceforge.net/projects/vjoystick/
 
