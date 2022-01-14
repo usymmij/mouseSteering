@@ -1,8 +1,9 @@
 ﻿;----------------------------------------
 ; Mouse Steering program made by Zoom377 | 27/9/2015
+; edits added by usymmij | 14/1/2021
 ;----------------------------------------
-maxKeys := 32
-keys := ["LButton","RButton", "S", "W", "Tab", "Delete", "XButton1", "XButton2", "MButton", "Shift", "Backspace"]
+global MARKER_COLORS := [0xffff0000, 0xff00ff00, 0xff0000ff]
+keys := ["LButton","RButton", "S", "W", "Q", "E", "Shift", "Space"]
 
 #Persistent
 #SingleInstance, Force
@@ -72,9 +73,6 @@ global MARKER_WIDTH_WITH_BORDER := 15
 global MARKER_HEIGHT := 30
 global MARKER_HEIGHT_WITH_BORDER := 30
 
-
-global MARKER_COLORS := [0xffff0000, 0xff00ff00, 0xff0000ff]
-
 global MOUSE_RESET_INTERVAL := 500
 
 global SCREEN_CENTER_X := A_ScreenWidth/2
@@ -84,7 +82,7 @@ global SCREEN_CENTER_Y := A_ScreenHeight/2
 global scale := 1
 global previousMouseX := 0
 global b := "" ;
-global joyStickX := 0
+global joyStickX := 16384 ; initiate from center
 global lastMouseReset := 0
 global mouseHideEnabled := false
 global markerEnabled := false
@@ -215,11 +213,10 @@ TimerTick:
 		}  
 	}
 	
-	Loop, %maxKeys% {
-		key := keys[A_Index]
-		;MsgBox, %A_Index%
+	for index, key in keys {
+		;MsgBox, %index%
 		;MsgBox, %key%
-		Button(key,A_Index)		
+		Button(key,index)		
 	}
 
 	
@@ -420,6 +417,54 @@ GetMonitorActiveWindow(){
 	return GetMonitorAtPos(x+width/2, y+height/2)
 }
 
+; cursor script from https://www.autohotkey.com/boards/viewtopic.php?f=6&t=37781
+cursor(bshow := True) { ; show the mouse cursor
+    static BlankCursor
+    static CursorList := "32512, 32513, 32514, 32515, 32516, 32640, 32641"
+        . ",32642, 32643, 32644, 32645, 32646, 32648, 32649, 32650, 32651"
+    local ANDmask, XORmask, CursorHandle
+
+    If bshow 
+        Return, DllCall("SystemParametersInfo"
+            , "UInt", 0x57              ; UINT  uiAction    (SPI_SETCURSORS)
+            , "UInt", 0                 ; UINT  uiParam
+            , "Ptr",  0                 ; PVOID pvParam
+            , "UInt", 0                 ; UINT  fWinIni
+            , "Cdecl Int")              ; return BOOL
+
+    If Not BlankCursor { ; create BlankCursor only once
+        VarSetCapacity(ANDmask, 32 * 4, 0xFF)
+        VarSetCapacity(XORmask, 32 * 4, 0x00)
+
+        BlankCursor := DllCall("CreateCursor"
+            , "Ptr", 0                  ; HINSTANCE  hInst
+            , "Int", 0                  ; int        xHotSpot
+            , "Int", 0                  ; int        yHotSpot
+            , "Int", 32                 ; int        nWidth
+            , "Int", 32                 ; int        nHeight
+            , "Ptr", &ANDmask           ; const VOID *pvANDPlane
+            , "Ptr", &XORmask           ; const VOID *pvXORPlane
+            , "Cdecl Ptr")              ; return HCURSOR
+    }
+
+    ; set all system cursors to blank, each needs a new copy
+    Loop, Parse, CursorList, `,, %A_Space%
+    {
+        CursorHandle := DllCall("CopyImage"
+            , "Ptr",  BlankCursor       ; HANDLE hImage
+            , "UInt", 2                 ; UINT   uType      (IMAGE_CURSOR)
+            , "Int",  0                 ; int    cxDesired
+            , "Int",  0                 ; int    cyDesired
+            , "UInt", 0                 ; UINT   fuFlags
+            , "Cdecl Ptr")              ; return HANDLE
+
+        DllCall("SetSystemCursor"
+            , "Ptr",  CursorHandle      ; HCURSOR hcur
+            , "UInt", A_Loopfield       ; DWORD   id
+            , "Cdecl Int")              ; return BOOL
+    }
+}
+
 ^F7::
 	markerColorIndex++
 	if (markerColorIndex > MARKER_COLORS.Length())
@@ -430,13 +475,12 @@ return
 
 ^F8::
 	mouseHideEnabled := !mouseHideEnabled
-	if (mouseHideEnabled)
-	{
-		MouseMove, 9999, A_ScreenHeight/2, 0
+	if (mouseHideEnabled) {
+		cursor(0)
 		BlockInput, MouseMove
 	}
-	else
-	{
+	else {	
+		cursor(1)
 		BlockInput, MouseMoveOff
 	}	
 return
@@ -452,4 +496,7 @@ return
 	}
 return
 
-^F12::ExitApp
+^F12::
+	cursor(1)
+	ExitApp
+return
